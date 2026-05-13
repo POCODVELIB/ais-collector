@@ -12,6 +12,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Find Python
+        run: |
+          $env:PATH
+          Get-Command python* -ErrorAction SilentlyContinue
+          Get-ChildItem "C:\Users\$env:USERNAME\AppData\Roaming\uv\python\" -ErrorAction SilentlyContinue
+          echo $env:USERNAME
 
       - name: Run AIS stream
         run: C:\Users\admin\AppData\Roaming\uv\python\cpython-3.14.4-windows-x86_64-none\python.exe ais_stream.py
