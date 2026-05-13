@@ -1,0 +1,9 @@
+{
+  "build": {
+    "builder": "DOCKERFILE"
+  },
+  "deploy": {
+    "startCommand": "python ais_stream.py",
+    "restartPolicyType": "ALWAYS"
+  }
+}
