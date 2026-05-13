@@ -1,17 +1,20 @@
 name: AIS Collection
 
 on:
-  workflow_dispatch:   
+  workflow_dispatch:
   push:
-    branches: [main]        # redémarre si on push
+    branches: [main]
 
 jobs:
   collect:
     runs-on: self-hosted
+    environment: snowflake_config
 
     steps:
       - uses: actions/checkout@v4
-      - run: python ais_stream.py
+
+      - name: Run AIS stream
+        run: py ais_stream.py
         env:
           AISSTREAM_API_KEY : ${{ secrets.AISSTREAM_API_KEY }}
           SF_USER           : ${{ secrets.SF_USER }}
