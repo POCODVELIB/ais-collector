@@ -41,43 +41,6 @@ def flush(cursor, batch: list):
         if os.path.exists(TMP_FILE):
             os.remove(TMP_FILE)
 
-async def stream(cursor, batch, count):
-    async with websockets.connect(
-        "wss://stream.aisstream.io/v0/stream",
-        ping_interval=20,
-        ping_timeout=30,
-    ) as ws:
-        await ws.send(json.dumps({
-            "APIKey"            : API_KEY,
-            "BoundingBoxes"     : BOUNDING_BOXES,
-            "FilterMessageTypes": ["PositionReport"],
-        }))
-        print("Connecte a AISStream ✅")
-
-        async for raw in ws:
-            try:
-                raw_str = decode(raw)
-                message = json.loads(raw_str)
-
-                if "error" in message:
-                    print(f"Erreur API : {message['error']}")
-                    break
-
-                if message.get("MessageType") != "PositionReport":
-                    continue
-
-                batch.append(raw_str)
-
-                if len(batch) >= BATCH_SIZE:
-                    flush(cursor, batch)
-                    count += len(batch)
-                    batch.clear()
-                    print(f"  Batch flush — total : {count}")
-
-            except Exception as e:
-                print(f"Erreur ignoree : {e}")
-    return count
-
 async def run():
     conn   = get_connection()
     cursor = conn.cursor()
@@ -87,17 +50,54 @@ async def run():
 
     while True:
         try:
-            count = await stream(cursor, batch, count)
+            async with websockets.connect(
+                "wss://stream.aisstream.io/v0/stream",
+                ping_interval=20,
+                ping_timeout=30,
+            ) as ws:
+                await ws.send(json.dumps({
+                    "APIKey"            : API_KEY,
+                    "BoundingBoxes"     : BOUNDING_BOXES,
+                    "FilterMessageTypes": ["PositionReport"],
+                }))
+                print("Connecte a AISStream ✅")
+
+                async for raw in ws:
+                    try:
+                        raw_str = decode(raw)
+                        message = json.loads(raw_str)
+
+                        if "error" in message:
+                            print(f"Erreur API : {message['error']}")
+                            break
+
+                        if message.get("MessageType") != "PositionReport":
+                            continue
+
+                        batch.append(raw_str)
+
+                        if len(batch) >= BATCH_SIZE:
+                            flush(cursor, batch)
+                            count += len(batch)
+                            batch.clear()
+                            print(f"  Batch flush — total : {count}")
+
+                    except Exception as e:
+                        print(f"Erreur ignoree : {e}")
+
         except Exception as e:
             print(f"Connexion perdue : {e} — reconnexion dans {RECONNECT_DELAY}s...")
+
         finally:
             if batch:
                 try:
                     flush(cursor, batch)
                     count += len(batch)
                     batch.clear()
+                    print(f"  Flush avant reconnexion — total : {count}")
                 except Exception as e:
                     print(f"Erreur flush : {e}")
+
         await asyncio.sleep(RECONNECT_DELAY)
 
 if __name__ == "__main__":
