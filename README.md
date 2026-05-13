@@ -9,16 +9,6 @@ Collecte en temps réel les messages AIS sur les côtes françaises et les ingè
 - **Stockage** : Snowflake (table `AIS_RAW`, colonne `RAW_JSON VARIANT`)
 - **Scheduler** : GitHub Actions (toutes les x heures à définir )
 
-## Structure
-```
-├── ais_stream.py        # Collecte et ingestion Snowflake
-├── ais_dataprep.py      # Preprocessing et encoding four-hot
-├── snowflake_config.py  # Connexion Snowflake via variables d'env
-├── requirements.txt     # Dépendances
-└── .github/
-    └── workflows/
-        └── ais_collect.yml  # GitHub Actions
-```
 
 ## Variables d'environnement
 À configurer dans `Settings → Secrets → Actions` sur GitHub :
