@@ -19,6 +19,7 @@ jobs:
           cache: "pip"
       - run: pip install -r requirements.txt
       - run: python ais_stream.py
+        continue-on-error: true
         env:
           AISSTREAM_API_KEY : ${{ secrets.AISSTREAM_API_KEY }}
           SF_USER           : ${{ secrets.SF_USER }}
