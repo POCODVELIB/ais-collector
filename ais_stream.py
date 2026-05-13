@@ -1,26 +1,27 @@
-"""
-AIS Stream — données des côtes françaises
-Collecte en temps réel les messages AIS (PositionReport) sur les côtes ouest françaises
-via AISStream.io et les ingère par batch de 100 dans une table Snowflake (RAW_JSON VARIANT).
-"""
-
 import asyncio
 import websockets
 import json
 import os
 from snowflake_config import get_connection
 
+"""
+AIS Stream. cotes françaises vers Snowflake
+Collecte en temps réel les messages AIS sur les côtes ouest françaises
+via AISStream.io et les ingère par batch de 100 dans une table Snowflake (RAW_JSON VARIANT).
+"""
+
 API_KEY = os.environ["AISSTREAM_API_KEY"]
 
 BOUNDING_BOXES = [
-    [[48.5, -2.5], [51.5,  2.5]],
-    [[46.5, -5.5], [48.5, -1.5]],
-    [[44.5, -3.0], [46.5, -1.0]],
-    [[43.0, -2.5], [44.5, -1.0]],
+    [[48.5, -2.5], [51.5,  2.5]],   # Manche
+    [[46.5, -5.5], [48.5, -1.5]],   # Bretagne
+    [[44.5, -3.0], [46.5, -1.0]],   # Vendée
+    [[43.0, -2.5], [44.5, -1.0]],   # Gironde 
 ]
 
-BATCH_SIZE = 100
-TMP_FILE   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ais_batch.json")
+BATCH_SIZE      = 100
+RECONNECT_DELAY = 5
+TMP_FILE        = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ais_batch.json")
 
 def decode(raw) -> str:
     return raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
@@ -28,11 +29,8 @@ def decode(raw) -> str:
 def flush(cursor, batch: list):
     with open(TMP_FILE, "w", encoding="utf-8") as f:
         f.writelines(r + "\n" for r in batch)
-
-    snowflake_path = TMP_FILE.replace("\\", "/")
-
     try:
-        cursor.execute(f"PUT 'file://{snowflake_path}' @%AIS_RAW AUTO_COMPRESS=TRUE OVERWRITE=TRUE")
+        cursor.execute(f"PUT 'file://{TMP_FILE.replace(chr(92), '/')}' @%AIS_RAW AUTO_COMPRESS=TRUE OVERWRITE=TRUE")
         cursor.execute("""
             COPY INTO AIS_RAW (RAW_JSON)
             FROM (SELECT PARSE_JSON($1) FROM @%AIS_RAW)
@@ -43,20 +41,18 @@ def flush(cursor, batch: list):
         if os.path.exists(TMP_FILE):
             os.remove(TMP_FILE)
 
-async def run():
-    conn   = get_connection()
-    cursor = conn.cursor()
-    batch  = []
-    count  = 0
-    print("Connecte a Snowflake ✅")
-
-    async with websockets.connect("wss://stream.aisstream.io/v0/stream") as ws:
+async def stream(cursor, batch, count):
+    async with websockets.connect(
+        "wss://stream.aisstream.io/v0/stream",
+        ping_interval=20,
+        ping_timeout=30,
+    ) as ws:
         await ws.send(json.dumps({
             "APIKey"            : API_KEY,
             "BoundingBoxes"     : BOUNDING_BOXES,
             "FilterMessageTypes": ["PositionReport"],
         }))
-        print("Connecte a AISStream ✅\n")
+        print("Connecte a AISStream ✅")
 
         async for raw in ws:
             try:
@@ -80,11 +76,29 @@ async def run():
 
             except Exception as e:
                 print(f"Erreur ignoree : {e}")
+    return count
 
-    if batch:
-        flush(cursor, batch)
-        count += len(batch)
-        print(f"  Flush final — total : {count}")
+async def run():
+    conn   = get_connection()
+    cursor = conn.cursor()
+    batch  = []
+    count  = 0
+    print("Connecte a Snowflake ✅")
+
+    while True:
+        try:
+            count = await stream(cursor, batch, count)
+        except Exception as e:
+            print(f"Connexion perdue : {e} — reconnexion dans {RECONNECT_DELAY}s...")
+        finally:
+            if batch:
+                try:
+                    flush(cursor, batch)
+                    count += len(batch)
+                    batch.clear()
+                except Exception as e:
+                    print(f"Erreur flush : {e}")
+        await asyncio.sleep(RECONNECT_DELAY)
 
 if __name__ == "__main__":
     asyncio.run(run())
