@@ -48,7 +48,8 @@ async def run():
     count  = 0
     print("Connecte a Snowflake ✅")
 
-    async with websockets.connect("wss://stream.aisstream.io/v0/stream") as ws:
+    async with websockets.connect("wss://stream.aisstream.io/v0/stream",     ping_interval=10,
+    ping_timeout=20) as ws:
         await ws.send(json.dumps({
             "APIKey"            : API_KEY,
             "BoundingBoxes"     : BOUNDING_BOXES,
