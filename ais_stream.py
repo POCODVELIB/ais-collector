@@ -46,7 +46,7 @@ async def run():
     cursor = conn.cursor()
     batch  = []
     count  = 0
-    print("Connecte a Snowflake ✅")
+    print("Connecté a Snowflake")
 
     async with websockets.connect("wss://stream.aisstream.io/v0/stream",     ping_interval=10,
     ping_timeout=20) as ws:
@@ -55,7 +55,7 @@ async def run():
             "BoundingBoxes"     : BOUNDING_BOXES,
             "FilterMessageTypes": ["PositionReport"],
         }))
-        print("Connecte a AISStream ✅\n")
+        print("Connecté a AISStream \n")
 
         try:
             async for raw in ws:
