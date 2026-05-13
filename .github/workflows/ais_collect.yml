@@ -1,5 +1,9 @@
-env:
-  PYTHON: C:\Users\SaidHousseine\AIS\.venv\Scripts\python.exe
+name: AIS Collection
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   collect:
@@ -8,7 +12,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - run: & $env:PYTHON ais_stream.py
+      - name: Run AIS stream
+        shell: cmd
+        run: C:\Users\SaidHousseine\AIS\.venv\Scripts\python.exe ais_stream.py
         env:
           AISSTREAM_API_KEY : ${{ secrets.AISSTREAM_API_KEY }}
           SF_USER           : ${{ secrets.SF_USER }}
