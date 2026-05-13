@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run AIS stream
-        run: py ais_stream.py
+        run: C:\Users\SaidHousseine\AppData\Local\Microsoft\WindowsApps\python.exe ais_stream.py
         env:
           AISSTREAM_API_KEY : ${{ secrets.AISSTREAM_API_KEY }}
           SF_USER           : ${{ secrets.SF_USER }}
