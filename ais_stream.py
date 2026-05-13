@@ -1,16 +1,20 @@
+
+
+
 import asyncio
 import websockets
 import json
 import os
+import tempfile
 from snowflake_config import get_connection
 
 API_KEY = os.environ["AISSTREAM_API_KEY"]
 
 BOUNDING_BOXES = [
-    [[48.5, -2.5], [51.5,  2.5]],   # Manche / Mer du Nord
-    [[46.5, -5.5], [48.5, -1.5]],   # Bretagne
-    [[44.5, -3.0], [46.5, -1.0]],   # Vendée / Charente
-    [[43.0, -2.5], [44.5, -1.0]],   # Gironde / Pays Basque
+    [[48.5, -2.5], [51.5,  2.5]],
+    [[46.5, -5.5], [48.5, -1.5]],
+    [[44.5, -3.0], [46.5, -1.0]],
+    [[43.0, -2.5], [44.5, -1.0]],
 ]
 
 BATCH_SIZE = 100
@@ -22,8 +26,11 @@ def decode(raw) -> str:
 def flush(cursor, batch: list):
     with open(TMP_FILE, "w", encoding="utf-8") as f:
         f.writelines(r + "\n" for r in batch)
+
+    snowflake_path = TMP_FILE.replace("\\", "/")
+
     try:
-        cursor.execute(f"PUT 'file://{TMP_FILE.replace(chr(92), '/')}' @%AIS_RAW AUTO_COMPRESS=TRUE OVERWRITE=TRUE")
+        cursor.execute(f"PUT 'file://{snowflake_path}' @%AIS_RAW AUTO_COMPRESS=TRUE OVERWRITE=TRUE")
         cursor.execute("""
             COPY INTO AIS_RAW (RAW_JSON)
             FROM (SELECT PARSE_JSON($1) FROM @%AIS_RAW)
@@ -47,7 +54,7 @@ async def run():
             "BoundingBoxes"     : BOUNDING_BOXES,
             "FilterMessageTypes": ["PositionReport"],
         }))
-        print("Connecte a AISStream ✅\n")
+        print("Connected to AISStream ✅\n")
 
         async for raw in ws:
             try:
@@ -72,6 +79,7 @@ async def run():
             except Exception as e:
                 print(f"Erreur ignoree : {e}")
 
+    # Flush du reste si le stream se coupe avant d'atteindre BATCH_SIZE
     if batch:
         flush(cursor, batch)
         count += len(batch)
