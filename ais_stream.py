@@ -4,24 +4,17 @@ import json
 import os
 from snowflake_config import get_connection
 
-"""
-AIS Stream. cotes françaises vers Snowflake
-Collecte en temps réel les messages AIS sur les côtes ouest françaises
-via AISStream.io et les ingère par batch de 100 dans une table Snowflake (RAW_JSON VARIANT).
-"""
-
 API_KEY = os.environ["AISSTREAM_API_KEY"]
 
 BOUNDING_BOXES = [
-    [[48.5, -2.5], [51.5,  2.5]],   # Manche
+    [[48.5, -2.5], [51.5,  2.5]],   # Manche / Mer du Nord
     [[46.5, -5.5], [48.5, -1.5]],   # Bretagne
-    [[44.5, -3.0], [46.5, -1.0]],   # Vendée
-    [[43.0, -2.5], [44.5, -1.0]],   # Gironde 
+    [[44.5, -3.0], [46.5, -1.0]],   # Vendée / Charente
+    [[43.0, -2.5], [44.5, -1.0]],   # Gironde / Pays Basque
 ]
 
-BATCH_SIZE      = 100
-RECONNECT_DELAY = 5
-TMP_FILE        = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ais_batch.json")
+BATCH_SIZE = 100
+TMP_FILE   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ais_batch.json")
 
 def decode(raw) -> str:
     return raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
@@ -48,57 +41,41 @@ async def run():
     count  = 0
     print("Connecte a Snowflake ✅")
 
-    while True:
-        try:
-            async with websockets.connect(
-                "wss://stream.aisstream.io/v0/stream",
-                ping_interval=20,
-                ping_timeout=30,
-            ) as ws:
-                await ws.send(json.dumps({
-                    "APIKey"            : API_KEY,
-                    "BoundingBoxes"     : BOUNDING_BOXES,
-                    "FilterMessageTypes": ["PositionReport"],
-                }))
-                print("Connecte a AISStream ✅")
+    async with websockets.connect("wss://stream.aisstream.io/v0/stream") as ws:
+        await ws.send(json.dumps({
+            "APIKey"            : API_KEY,
+            "BoundingBoxes"     : BOUNDING_BOXES,
+            "FilterMessageTypes": ["PositionReport"],
+        }))
+        print("Connecte a AISStream ✅\n")
 
-                async for raw in ws:
-                    try:
-                        raw_str = decode(raw)
-                        message = json.loads(raw_str)
+        async for raw in ws:
+            try:
+                raw_str = decode(raw)
+                message = json.loads(raw_str)
 
-                        if "error" in message:
-                            print(f"Erreur API : {message['error']}")
-                            break
+                if "error" in message:
+                    print(f"Erreur API : {message['error']}")
+                    break
 
-                        if message.get("MessageType") != "PositionReport":
-                            continue
+                if message.get("MessageType") != "PositionReport":
+                    continue
 
-                        batch.append(raw_str)
+                batch.append(raw_str)
 
-                        if len(batch) >= BATCH_SIZE:
-                            flush(cursor, batch)
-                            count += len(batch)
-                            batch.clear()
-                            print(f"  Batch flush — total : {count}")
-
-                    except Exception as e:
-                        print(f"Erreur ignoree : {e}")
-
-        except Exception as e:
-            print(f"Connexion perdue : {e} — reconnexion dans {RECONNECT_DELAY}s...")
-
-        finally:
-            if batch:
-                try:
+                if len(batch) >= BATCH_SIZE:
                     flush(cursor, batch)
                     count += len(batch)
                     batch.clear()
-                    print(f"  Flush avant reconnexion — total : {count}")
-                except Exception as e:
-                    print(f"Erreur flush : {e}")
+                    print(f"  Batch flush — total : {count}")
 
-        await asyncio.sleep(RECONNECT_DELAY)
+            except Exception as e:
+                print(f"Erreur ignoree : {e}")
+
+    if batch:
+        flush(cursor, batch)
+        count += len(batch)
+        print(f"  Flush final — total : {count}")
 
 if __name__ == "__main__":
     asyncio.run(run())
