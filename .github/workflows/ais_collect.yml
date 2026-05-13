@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+env:
+  PYTHON: C:\Users\SaidHousseine\AIS\.venv\Scripts\python.exe
+
 jobs:
   collect:
     runs-on: self-hosted
@@ -12,12 +15,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: C:\Users\SaidHousseine\AppData\Roaming\uv\python\cpython-3.14.4-windows-x86_64-none\python.exe -m pip install -r requirements.txt
-
-      - name: Run AIS stream
-        run: C:\Users\SaidHousseine\AppData\Roaming\uv\python\cpython-3.14.4-windows-x86_64-none\python.exe ais_stream.py
+      - run: $env:PYTHON ais_stream.py
         env:
           AISSTREAM_API_KEY : ${{ secrets.AISSTREAM_API_KEY }}
           SF_USER           : ${{ secrets.SF_USER }}
