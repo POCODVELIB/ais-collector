@@ -1,9 +1,14 @@
 {
+  "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "RAILPACK"
+    "builder": "RAILPACK",
+    "buildEnvironment": "V3"
   },
   "deploy": {
     "startCommand": "python ais_stream.py",
+    "runtime": "V2",
+    "numReplicas": 1,
+    "sleepApplication": false,
     "restartPolicyType": "ALWAYS"
   }
 }
