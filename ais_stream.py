@@ -54,32 +54,35 @@ async def run():
             "BoundingBoxes"     : BOUNDING_BOXES,
             "FilterMessageTypes": ["PositionReport"],
         }))
-        print("Connected to AISStream ✅\n")
+        print("Connecte a AISStream ✅\n")
 
-        async for raw in ws:
-            try:
-                raw_str = decode(raw)
-                message = json.loads(raw_str)
+        try:
+            async for raw in ws:
+                try:
+                    raw_str = decode(raw)
+                    message = json.loads(raw_str)
 
-                if "error" in message:
-                    print(f"Erreur API : {message['error']}")
-                    break
+                    if "error" in message:
+                        print(f"Erreur API : {message['error']}")
+                        break
 
-                if message.get("MessageType") != "PositionReport":
-                    continue
+                    if message.get("MessageType") != "PositionReport":
+                        continue
 
-                batch.append(raw_str)
+                    batch.append(raw_str)
 
-                if len(batch) >= BATCH_SIZE:
-                    flush(cursor, batch)
-                    count += len(batch)
-                    batch.clear()
-                    print(f"  Batch flush — total : {count}")
+                    if len(batch) >= BATCH_SIZE:
+                        flush(cursor, batch)
+                        count += len(batch)
+                        batch.clear()
+                        print(f"  Batch flush — total : {count}")
 
-            except Exception as e:
-                print(f"Erreur ignoree : {e}")
+                except Exception as e:
+                    print(f"Erreur ignoree : {e}")
 
-    # Flush du reste si le stream se coupe avant d'atteindre BATCH_SIZE
+        except websockets.exceptions.ConnectionClosedError as e:
+            print(f"Connexion fermee : {e}")
+
     if batch:
         flush(cursor, batch)
         count += len(batch)
