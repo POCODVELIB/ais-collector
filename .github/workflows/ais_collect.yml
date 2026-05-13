@@ -1,0 +1,27 @@
+name: AIS Collection
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python ais_stream.py
+        env:
+          AISSTREAM_API_KEY : ${{ secrets.AISSTREAM_API_KEY }}
+          SF_USER           : ${{ secrets.SF_USER }}
+          SF_PASSWORD       : ${{ secrets.SF_PASSWORD }}
+          SF_ACCOUNT        : ${{ secrets.SF_ACCOUNT }}
+          SF_WAREHOUSE      : ${{ secrets.SF_WAREHOUSE }}
+          SF_DATABASE       : ${{ secrets.SF_DATABASE }}
+          SF_SCHEMA         : ${{ secrets.SF_SCHEMA }}
