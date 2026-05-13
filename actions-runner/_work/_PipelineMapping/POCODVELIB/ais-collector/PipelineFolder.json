@@ -1,0 +1,12 @@
+﻿{
+  "repositoryName": "POCODVELIB/ais-collector",
+  "pipelineDirectory": "ais-collector",
+  "workspaceDirectory": "ais-collector\\ais-collector",
+  "repositories": {
+    "POCODVELIB/ais-collector": {
+      "repositoryPath": "ais-collector\\ais-collector",
+      "lastRunOn": "05/13/2026 11:35:52 +02:00"
+    }
+  },
+  "lastRunOn": "05/13/2026 11:56:52 +02:00"
+}

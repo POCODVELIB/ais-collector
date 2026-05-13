@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 21,
+  "agentName": "FR-7Z6YCS3",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus26.actions.githubusercontent.com/W2MmwzJVLXQYuMO1JwlThqPvWgmkFATQxDSsVChidMzvGfBmZN/",
+  "gitHubUrl": "https://github.com/POCODVELIB/ais-collector",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}
